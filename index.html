@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <style>
+      body {
+        background: black;
+        color:#CCCCCC;
+        font-family: monospace;
+      }
+      #container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+      }
+      #controls {
+        position: absolute;
+        bottom: 0;
+        width: calc(100% - 20px);
+        padding: 10px;
+      }
+      #loadVideo {
+        width: 100%;
+        text-align: center;
+        padding-top: 20%;
+      }
+      #loadVideo button {
+        padding: 10px;
+        border-radius: 5px;
+        background: lightseagreen;
+        border: none;
+        cursor: pointer;
+        font-size: 150%;
+        font-family: monospace;
+      }
+      #videoLoader {
+        width: 100%;
+        text-align: center;
+        padding-top: 20%;
+        font-size: 150%;
+      }
+      #menu {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 10px;
+        font-size: 200%;
+        text-align: right;
+      }
+
+      #menu div {
+        background: rgba(0, 0, 0, 0.5);
+      }
+
+      #menu a {
+        text-decoration: none;
+        color: white;
+        padding: 20px;
+        margin: 0;
+        display: inline-block;
+      }
+
+      .keyframe {
+        stroke-width: 2;
+        stroke: red;
+      }
+      #currentTime {
+        stroke-width: 2;
+        stroke: forestgreen;
+      }
+
+      #popup {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        text-align: center;
+        padding: 20%;
+        font-size: 200%;
+        background: rgba(0, 0, 0, 0.75);
+      }
+
+      #popup a {
+        text-decoration: none;
+        color: white;
+        padding: 20px;
+        margin: 0;
+        display: inline-block;
+      }
+
+      #calibration, #tracking, #trackpath {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+
+      #calibration_point1, #calibration_point2 {
+        fill: rgba(0, 255, 0, 0.25);
+        stroke: rgb(255, 255, 255);
+        stroke-width: 5;
+        cursor: pointer;
+      }
+
+      #calibration_point1.selected, #calibration_point2.selected {
+        stroke: rgb(255, 255, 255);
+        stroke-width: 10;
+      }
+
+      #calibration_line {
+        stroke: rgba(0, 255, 0, 0.5);
+        stroke-width: 5;
+        pointer-events: none;
+      }
+
+      #menu_calibration input {
+        border: 2px solid gray;
+        color: white;
+        background: transparent;
+        font-size: 100%;
+        width: 100px;
+        font-family: monospace;
+        border-right: none;
+        text-align: right;
+      }
+
+      #calibration_unit {
+        border: 2px solid gray;
+        border-left: none;
+        padding: 1px;
+      }
+
+      #magnifier {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        border-radius: 5px;
+      }
+
+      #tracking_point {
+        fill: rgba(0, 255, 0, 0.25);
+        stroke: rgb(255, 255, 255);
+        stroke-width: 5;
+        cursor: pointer;
+      }
+
+      #tracking_dot {
+        fill: black;
+        stroke: none;
+        pointer-events: none;
+      }
+
+      #tracking_path {
+        stroke: lightseagreen;
+        stroke-width: 5;
+        fill: none;
+      }
+
+      #velocity {
+        text-anchor: middle;
+        font-family: monospace;
+        fill: lightseagreen;
+        stroke:rgba(0, 0, 0, 0.5);
+        stroke-width: 2;
+        font-size: 400%;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <input type="file" accept="video/*" style="display: none;"/>
+    <div id="container" style="display: none;">
+      <video id="video" width="100%" height="100%"></video>
+      <svg id="calibration" width="100%" height="100%" viewBox="0 0 1920 1080" style="display: none;">
+          <circle id="calibration_point1" cx="800" cy="540" r="50"></circle>
+          <circle id="calibration_point2" cx="1120" cy="540" r="50"></circle>
+          <line id="calibration_line" x1="800" y1="540" x2="1120" y2="540"></line>
+      </svg>
+      <svg id="tracking" width="100%" height="100%" viewBox="0 0 1920 1080" style="display: none;">
+        <circle id="tracking_point"></circle>
+      </svg>
+      <svg id="trackpath" width="100%" height="100%" viewBox="0 0 1920 1080" style="pointer-events: none;">
+        <path id="tracking_path"></path>
+        <circle id="tracking_dot"></circle>
+        <text id="velocity"></text>
+      </svg>
+      <canvas id="magnifier" width="200" height="200" style="display: none;"></canvas>
+      <div id="controls">
+        <canvas id="c1" width="320" height="180" style="display: none;"></canvas>
+        <canvas id="histogram" width="1000" height="50" style="width: 100%; border-radius: 10px;"></canvas>
+        <svg id="timeline" viewBox="0 0 1000 50" style="width: 100%; border-radius: 10px; position: absolute; bottom: 10px; left: 0; pointer-events: none;">
+            <line id="currentTime" y1="0" y2="50"></line>
+        </svg>
+      </div>
+      <div id="menu">
+        <div id="modes" style="border-bottom: 2px solid gray; ">
+            <a id="menuButtonKeyframes" href="#" onClick="menuKeyframes(); event.preventDefault();">[Keyframes]</a>
+            <a id="menuButtonCalibration" href="#" onClick="menuCalibration(); event.preventDefault();">&nbsp;Calibration&nbsp; </a>
+            <a id="menuButtonTracking" href="#" onClick="menuTracking(); event.preventDefault();">&nbsp;Tracking&nbsp;</a>
+        </div>
+        <div id="menu_keyframes">
+            <a href="#" onClick="clearAllKeyframes(); event.preventDefault();">Clear</a>
+            <a href="#" onClick="addKeyframe(); event.preventDefault();">Add</a>
+            <a href="#" onClick="removeKeyframe(); event.preventDefault();">Remove</a>
+            <a href="#" onClick="jumpToPrevKeyframe(); event.preventDefault();">Prev</a>
+            <a href="#" onClick="jumpToNextKeyframe(); event.preventDefault();">Next</a>
+        </div>
+        <div id="menu_calibration" style="display: none;">
+          <span>Width: </span><input type="number" step='0.1' oninput="setCalibrationWidth()"/><span id="calibration_unit">cm</span>
+          <a href="#" onClick="resetCalibration(); event.preventDefault();">Reset</a>
+        </div>
+        <div id="menu_tracking" style="display: none;">
+          <a href="#" onClick="clearTracks(); event.preventDefault();">Clear</a>
+          <a href="#" onClick="removeTrack(); event.preventDefault();">Remove</a>
+          <a href="#" onClick="trackPrev(); event.preventDefault();">Prev</a>
+          <a href="#" onClick="trackNext(); event.preventDefault();">Next</a>
+        </div>
+      </div>
+
+      <div id="popup" style="display: none;">
+        <div id="popup_text"></div>
+        <a id="popup_yes" href="#">[Yes]</a>
+        <a id="popup_no" href="#">[No]</a>
+      </div>
+
+    </div>
+    <div id="loadVideo"><button onClick="document.querySelector('input').click()">Load video</button></div>
+    <div id="videoLoader" style="display: none;"><div></div><p><a href="#" onClick="skipAnalysis(); event.preventDefault();">[Skip]</a></p></div>
+    <script type="text/javascript" src="d3.min.js"></script>
+    <script type="text/javascript" src="processor.js"></script>
+  </body>
+</html>
