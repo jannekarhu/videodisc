@@ -3,6 +3,7 @@
   <head>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" type="text/css" href="ionicons.min.css" />
     <style>
       body {
         background: black;
@@ -38,17 +39,22 @@
       }
       #videoLoader {
         width: 100%;
+        position: absolute;
         text-align: center;
-        padding-top: 20%;
         font-size: 150%;
+        top: 40%;
       }
       #menu {
         position: absolute;
         top: 0;
-        right: 0;
+        right: 80px;
         padding: 10px;
         font-size: 200%;
         text-align: right;
+      }
+
+      #menu.hide {
+        display: none;
       }
 
       #menu div {
@@ -168,6 +174,29 @@
         font-size: 400%;
         font-weight: bold;
       }
+
+      #buttons {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 200%;
+      }
+
+      #buttons i {
+        font-size: 200%;
+        cursor: pointer;
+        margin-right: 10px;
+        user-select: none;
+      }
+
+      #buttons.hide i {
+        display: none;
+      }
+
+      #buttons.hide #navbutton {
+        display: block;
+      }
+
     </style>
   </head>
 
@@ -196,7 +225,7 @@
             <line id="currentTime" y1="0" y2="50"></line>
         </svg>
       </div>
-      <div id="menu">
+      <div id="menu" class="hide">
         <div id="modes" style="border-bottom: 2px solid gray; ">
             <a id="menuButtonKeyframes" href="#" onClick="menuKeyframes(); event.preventDefault();">[Keyframes]</a>
             <a id="menuButtonCalibration" href="#" onClick="menuCalibration(); event.preventDefault();">&nbsp;Calibration&nbsp; </a>
@@ -219,6 +248,17 @@
           <a href="#" onClick="trackPrev(); event.preventDefault();">Prev</a>
           <a href="#" onClick="trackNext(); event.preventDefault();">Next</a>
         </div>
+      </div>
+      <div id="buttons">
+        <span id="keyframe_buttons">
+          <i class="ion-arrow-left-c" onClick="jumpToPrevKeyframe()"></i>
+          <i class="ion-arrow-right-c" onClick="jumpToNextKeyframe()"></i>
+        </span>
+        <span id="tracking_buttons" style="display: none;">
+          <i class="ion-arrow-left-c" onClick="trackPrev()"></i>
+          <i class="ion-arrow-right-c" onClick="trackNext()"></i>
+        </span>
+        <i id="navbutton" class="ion-navicon-round" onClick="toggleMenu()"></i>
       </div>
 
       <div id="popup" style="display: none;">

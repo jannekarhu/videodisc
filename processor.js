@@ -168,6 +168,8 @@ function createHistogram() {
 		this.removeEventListener("timeupdate", createHistogram, false);
 		d3.select("#container").style("display", null);
 		d3.select("#videoLoader").style("display", "none");
+		const container = document.getElementById('container');
+		container.requestFullscreen();
 		return;
 	}
 
@@ -209,9 +211,6 @@ var playSelectedFile = function(event) {
 	} catch(e) {}
 
 	processor.doLoad();
-
-	const container = document.getElementById('container');
-	container.requestFullscreen();
 
 	var histogramMouseMove = function() {
 		if(d3.event.buttons == 1 || d3.event.touches) {
@@ -583,6 +582,8 @@ function menuKeyframes()
 	d3.select("#tracking").style("display", "none");
 	d3.select("#calibration").style("display", "none");
 	d3.select("#magnifier").style("display", "none");
+	d3.select("#tracking_buttons").style("display", "none");
+	d3.select("#keyframe_buttons").style("display", null);
 }
 
 function menuCalibration()
@@ -596,6 +597,8 @@ function menuCalibration()
 	d3.select("#tracking").style("display", "none");
 	d3.select("#calibration").style("display", null);
 	d3.select("#magnifier").style("display", null);	
+	d3.select("#tracking_buttons").style("display", "none");
+	d3.select("#keyframe_buttons").style("display", "none");
 }
 
 function menuTracking()
@@ -609,6 +612,8 @@ function menuTracking()
 	d3.select("#tracking").style("display", null);
 	d3.select("#calibration").style("display", "none");
 	d3.select("#magnifier").style("display", "none");
+	d3.select("#tracking_buttons").style("display", null);
+	d3.select("#keyframe_buttons").style("display", "none");
 }
 
 function clearTracks()
@@ -711,4 +716,9 @@ function refreshTracking()
 
 function storeChanges() {
 	localStorage.setItem(document.querySelector("input").files[0].name, JSON.stringify({calibration: calibration, keyframes: keyframes, track: track}));
+}
+
+function toggleMenu() {
+	d3.select("#menu").classed("hide", !d3.select("#menu").classed("hide"));
+	d3.select("#buttons").classed("hide", !d3.select("#buttons").classed("hide"));
 }
