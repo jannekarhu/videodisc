@@ -211,6 +211,15 @@ var playSelectedFile = function(event) {
 		calibration = ob.calibration;
 	} catch(e) {}
 
+	if(ob.histogram) {
+		stopAnalysis = true;
+
+		var img = new Image;
+		img.src = ob.histogram;
+		img.onload = function () {
+			document.getElementById("histogram").getContext("2d").drawImage(img, 0, 0);
+		};
+	}
 	processor.doLoad();
 
 	var histogramMouseMove = function() {
@@ -807,7 +816,7 @@ function refreshTracking()
 }
 
 function storeChanges() {
-	localStorage.setItem(document.querySelector("input").files[0].name, JSON.stringify({calibration: calibration, keyframes: keyframes, track: track}));
+	localStorage.setItem(document.querySelector("input").files[0].name, JSON.stringify({calibration: calibration, keyframes: keyframes, track: track, histogram: document.getElementById("histogram").toDataURL()}));
 }
 
 function toggleMenu() {
