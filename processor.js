@@ -13,6 +13,7 @@ var trackingPointStart;
 var trackingMouseStart;
 var trackingMoveMul = 1;
 var stopAnalysis = false;
+var mode = "keyframes";
 
 const getMediaTime = () => new Promise(resolve => {
 	const video = document.getElementById('video');
@@ -547,13 +548,13 @@ function refreshCalibration()
 
 	d3.select("#menu_calibration input")[0][0].value = calibration.width || "";
 
-	if(processor.video) {
+	if(processor.video && mode == "calibration") {
 		var mag = document.getElementById("magnifier");
 		var ctx = mag.getContext("2d");
 
 		if(calibration.editPoint == 1)
 			ctx.drawImage(processor.video, calibration.x1-50, calibration.y1-50, 100, 100, 0, 0, 200, 200);
-		else
+		else if(calibration.editPoint == 2)
 			ctx.drawImage(processor.video, calibration.x2-50, calibration.y2-50, 100, 100, 0, 0, 200, 200);
 
 		ctx.fillStyle = "red";
@@ -581,9 +582,11 @@ function menuKeyframes()
 	d3.select("#menu_tracking").style("display", "none");
 	d3.select("#tracking").style("display", "none");
 	d3.select("#calibration").style("display", "none");
-	d3.select("#magnifier").style("display", "none");
+	d3.select("#magnifier").style("display", null);
 	d3.select("#tracking_buttons").style("display", "none");
 	d3.select("#keyframe_buttons").style("display", null);
+	calibration.editPoint = 0;
+	mode = "keyframes";
 }
 
 function menuCalibration()
@@ -599,6 +602,8 @@ function menuCalibration()
 	d3.select("#magnifier").style("display", null);	
 	d3.select("#tracking_buttons").style("display", "none");
 	d3.select("#keyframe_buttons").style("display", "none");
+	calibration.editPoint = 0;
+	mode = "calibration";
 }
 
 function menuTracking()
@@ -611,9 +616,11 @@ function menuTracking()
 	d3.select("#menu_tracking").style("display", null);
 	d3.select("#tracking").style("display", null);
 	d3.select("#calibration").style("display", "none");
-	d3.select("#magnifier").style("display", "none");
+	d3.select("#magnifier").style("display", null);
 	d3.select("#tracking_buttons").style("display", null);
 	d3.select("#keyframe_buttons").style("display", "none");
+	calibration.editPoint = 0;
+	mode = "tracking";
 }
 
 function clearTracks()
@@ -640,6 +647,8 @@ var tracking_path = d3.svg.line().interpolate("monotone").x(function(d){return d
 
 function refreshTracking()
 {
+	var time_multiplier = 1; // 8 for 240fps
+
 	var point = track.find(function(d){return d.t == videoTime;});
 
 	var opacity = 1;
@@ -675,16 +684,17 @@ function refreshTracking()
 			opacity: opacity
 		});
 
+		var angle = 0;
 		var i = track.indexOf(point);
 		if(i>0) {
 			var dx = point.x - track[i-1].x;
 			var dy = point.y - track[i-1].y;
-			var dt = point.t - track[i-1].t;
+			var dt = (point.t - track[i-1].t)/time_multiplier;
 
 			if(dt < 0.1) {
 				var v = Math.sqrt(dx*dx+dy*dy)/(2*calibration.radius)*(calibration.width*0.01)/dt;
 
-				var a = -(Math.atan2(dx, dy)*180/Math.PI + 90);
+				angle = -(Math.atan2(dx, dy)*180/Math.PI + 90);
 				//if(a < -90)
 				//	a = 180+a;
 				//else if(a > 90)
@@ -693,7 +703,7 @@ function refreshTracking()
 				d3.select("#velocity").style("visibility", null).attr({
 					x: (point.x + track[i-1].x)/2,
 					y: (point.y + track[i-1].y)/2 - 30
-				}).html(v.toFixed(1) + " m/s " + Math.round(a) + "&deg;");
+				}).html(v.toFixed(1) + " m/s " + Math.round(angle) + "&deg;");
 			}
 			else {
 				d3.select("#velocity").style("visibility", "hidden");	
@@ -701,6 +711,33 @@ function refreshTracking()
 		}
 		else {
 			d3.select("#velocity").style("visibility", "hidden");
+		}
+
+		if(processor.video && mode != "calibration") {
+			var mag = document.getElementById("magnifier");
+			var ctx = mag.getContext("2d");
+	
+			var r = Math.round(calibration.radius*1.3);
+			ctx.drawImage(processor.video, point.x-r, point.y-r, 2*r, 2*r, 0, 0, 200, 200);
+
+			if(mode == "tracking") {
+				ctx.fillStyle = "red";
+				ctx.fillRect(99, 80, 2, 40);
+				ctx.fillRect(80, 99, 40, 2);
+				ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+				ctx.fillRect(23, 75, 2, 50);
+				ctx.fillRect(177, 75, 2, 50);
+				ctx.fillRect(23, 75, 154, 2);
+				ctx.fillRect(23, 125, 154, 2);
+			}
+			if(mode == "keyframes") {
+				ctx.translate(100, 100);
+				ctx.rotate(angle*Math.PI/180);
+				ctx.translate(-100, -100);
+				ctx.fillStyle = "cyan";
+				ctx.fillRect(-50, 100, 300, 2);
+				ctx.setTransform(1, 0, 0, 1, 0, 0);
+			}
 		}
 	}
 	else {
@@ -710,8 +747,63 @@ function refreshTracking()
 		d3.select("#velocity").style("visibility", "hidden");
 	}
 
-	var visiblePoints = track.filter(function(d){return Math.abs(d.t - videoTime) < 1.5;});
+	var visiblePoints = track.filter(function(d){return Math.abs(d.t - videoTime) < 1.5 * time_multiplier;});
 	d3.select("#tracking_path").attr("d", tracking_path(visiblePoints));
+
+	var velocityPoints = [];
+	var accelerationPoints = [];
+	for(var i=1; i<visiblePoints.length-1; i++) {
+		var a = visiblePoints[i-1];
+		var b = visiblePoints[i];
+		var c = visiblePoints[i+1];
+
+		var dx1 = b.x-a.x;
+		var dy1 = b.y-a.y;
+		var dt1 = (b.t-a.t)/time_multiplier;
+
+		var dx2 = c.x-b.x;
+		var dy2 = c.y-b.y;
+		var dt2 = (c.t-b.t)/time_multiplier;
+
+		var v1 = Math.sqrt(dx1*dx1+dy1*dy1)/(2*calibration.radius)*(calibration.width*0.01)/dt1;
+		var v2 = Math.sqrt(dx2*dx2+dy2*dy2)/(2*calibration.radius)*(calibration.width*0.01)/dt2;
+
+		var acc = (v2 - v1)/((c.t-a.t)/2/time_multiplier);
+
+		velocityPoints.push({v: v1, t: (a.t+b.t)/2});
+		accelerationPoints.push({a: acc, t: b.t});
+	}
+
+    var x = d3.scale.linear().domain([-0.2*time_multiplier, 0.2*time_multiplier]).range([0, 100]);
+	
+	if(velocityPoints.length > 0) {
+		var max_v_point = velocityPoints[0];
+		velocityPoints.forEach(function(d){
+			if(d.v > max_v_point.v)
+				max_v_point = d;
+		});
+
+		var max_v_t = max_v_point.t;
+
+		velocityPoints.forEach(function(d) {
+			d.t -= max_v_t;
+		});
+		accelerationPoints.forEach(function(d) {
+			d.t -= max_v_t;
+		});
+
+		d3.select("#graph_time").attr("x1", x(videoTime-max_v_t)).attr("x2", x(videoTime-max_v_t));
+	}
+
+    var yv = d3.scale.linear().domain([0, 40]).range([100, 0]);
+	var ya1 = d3.scale.linear().domain([-800, 800]).range([100, 0]);
+	var ya2 = d3.scale.linear().domain([-80, 80]).range([100, 0]);
+
+	var velocity_path = d3.svg.line().interpolate("basis").x(function(d){return x(d.t);}).y(function(d){return yv(d.v);});
+	var acceleration_path = d3.svg.line().interpolate("basis").x(function(d){return x(d.t);}).y(function(d){return d.t <= 0 ? ya1(d.a) : ya2(d.a);});
+
+	d3.select("#velocity_graph").attr("d", velocity_path(velocityPoints));
+	d3.select("#acceleration_graph").attr("d", acceleration_path(accelerationPoints));
 }
 
 function storeChanges() {
