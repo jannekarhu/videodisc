@@ -211,7 +211,7 @@ var playSelectedFile = function(event) {
 		calibration = ob.calibration;
 	} catch(e) {}
 
-	if(ob.histogram) {
+	if(ob && ob.histogram) {
 		stopAnalysis = true;
 
 		var img = new Image;
